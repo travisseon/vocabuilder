@@ -328,8 +328,8 @@ function giveUp() {
     });
     
     // Show as incorrect attempt
-    correctSentence = '<%= j @sentence.english_text %>';
-    koreanSentence = '<%= j @sentence.korean_text %>';
+    correctSentence = <%= @sentence.english_text.to_json.html_safe %>;
+    koreanSentence = <%= @sentence.korean_text.to_json.html_safe %>;
     verbExplanations = <%= @sentence.verb_explanations.map { |e| { verb: e.verb, explanation: e.explanation, comparison: e.comparison, examples: e.examples } }.to_json.html_safe %>;
     
     // Update modal content
