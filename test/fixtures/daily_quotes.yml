@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  english_text: MyText
+  korean_text: MyText
+  author: MyString
+  is_active: false
+  display_date: 2025-07-09
+
+two:
+  english_text: MyText
+  korean_text: MyText
+  author: MyString
+  is_active: false
+  display_date: 2025-07-09

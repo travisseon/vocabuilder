@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Vocabuilder" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-gray-50 min-h-screen">
+    <% if logged_in? %>
+      <!-- Navigation Header -->
+      <nav class="bg-white shadow-lg fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between h-16">
+            <div class="flex items-center">
+              <%= link_to dashboard_path, class: "text-2xl font-bold text-blue-600" do %>
+                🎯 VocaBuilder
+              <% end %>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+              <%= link_to reviews_path, class: "text-purple-600 hover:text-purple-800 flex items-center" do %>
+                🔄 복습
+              <% end %>
+              <%= link_to decks_path, class: "text-blue-600 hover:text-blue-800 flex items-center" do %>
+                📚 덱
+              <% end %>
+              <span class="text-gray-700">안녕하세요, <%= current_user.nickname %>님!</span>
+              <%= link_to "/profile", class: "text-blue-600 hover:text-blue-800" do %>
+                프로필
+              <% end %>
+              <%= link_to "/logout", data: { "turbo-method": :delete }, class: "bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors" do %>
+                로그아웃
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      <!-- Flash Messages -->
+      <% if flash.any? %>
+        <div class="fixed top-16 left-0 right-0 z-40">
+          <% flash.each do |type, message| %>
+            <div class="alert alert-<%= type == 'error' ? 'danger' : type %> bg-<%= type == 'error' ? 'red' : 'green' %>-100 border border-<%= type == 'error' ? 'red' : 'green' %>-400 text-<%= type == 'error' ? 'red' : 'green' %>-700 px-4 py-3 rounded mx-4 my-2">
+              <%= message %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      
+      <!-- Main Content -->
+      <main class="pt-20 pb-8">
+        <%= yield %>
+      </main>
+    <% else %>
+      <!-- Flash Messages for non-logged in users -->
+      <% if flash.any? %>
+        <div class="fixed top-4 left-0 right-0 z-40">
+          <% flash.each do |type, message| %>
+            <div class="bg-<%= type == 'error' ? 'red' : 'green' %>-100 border border-<%= type == 'error' ? 'red' : 'green' %>-400 text-<%= type == 'error' ? 'red' : 'green' %>-700 px-4 py-3 rounded mx-4 my-2">
+              <%= message %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      
+      <!-- Content for non-logged in users -->
+      <main class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <%= yield %>
+      </main>
+    <% end %>
+  </body>
+</html>

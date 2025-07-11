@@ -1,0 +1,172 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <!-- Welcome Section -->
+  <div class="mb-8">
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
+      <h1 class="text-3xl font-bold mb-2">🔥 <%= @user.nickname %>님, <%= @user.streak_days %>일 연속 학습 중이에요!</h1>
+      <p class="text-blue-100">총 학습시간: <span class="font-bold"><%= @total_study_time_hours %>시간</span></p>
+    </div>
+  </div>
+
+  <!-- Daily Quote Section -->
+  <% if @daily_quote %>
+    <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">📜 오늘의 영어 명언</h2>
+      <blockquote class="text-lg text-gray-700 italic mb-2">
+        "<%= @daily_quote.english_text %>"
+      </blockquote>
+      <p class="text-gray-600 mb-2"><%= @daily_quote.korean_text %></p>
+      <% if @daily_quote.author %>
+        <p class="text-sm text-gray-500 text-right">- <%= @daily_quote.author %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Review Section -->
+  <% if @review_stats[:total_reviews] > 0 %>
+    <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">🔄 복습 센터</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-red-600"><%= @review_stats[:overdue] %></div>
+          <div class="text-xs text-red-700">밀린 복습</div>
+        </div>
+        
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-yellow-600"><%= @review_stats[:today_due] %></div>
+          <div class="text-xs text-yellow-700">오늘 복습</div>
+        </div>
+        
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-blue-600"><%= @review_stats[:total_reviews] %></div>
+          <div class="text-xs text-blue-700">총 복습</div>
+        </div>
+      </div>
+      
+      <div class="text-center">
+        <%= link_to reviews_path, 
+                    class: "bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center" do %>
+          🧠 지금 복습하기
+        <% end %>
+        <p class="text-xs text-gray-500 mt-2">에빙하우스 망각곡선에 따른 최적의 복습 시점입니다!</p>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Progress Section -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <!-- Learning Decks -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">📚 학습 덱</h2>
+      
+      <% if @user_deck_progresses.any? %>
+        <div class="space-y-4">
+          <% @user_deck_progresses.each do |progress| %>
+            <div class="border border-gray-200 rounded-lg p-4">
+              <div class="flex justify-between items-center mb-2">
+                <h3 class="font-semibold text-gray-800"><%= progress.deck.name %></h3>
+                <span class="text-sm text-gray-500">LV.<%= progress.deck.difficulty_level %></span>
+              </div>
+              
+              <div class="mb-3">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>진행률: <%= progress.progress_percentage.to_i %>%</span>
+                  <span><%= progress.completed_sentences %>/<%= progress.total_sentences %> 문장</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div class="bg-blue-600 h-2 rounded-full" style="width: <%= progress.progress_percentage %>%"></div>
+                </div>
+              </div>
+              
+              <div class="flex justify-between items-center">
+                <p class="text-sm text-gray-500">⏱️ 총 학습시간: <%= (progress.study_time / 60.0).round %>분</p>
+                <%= link_to deck_path(progress.deck), class: "bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg transition-colors" do %>
+                  이어서 학습하기
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="text-center py-8">
+          <p class="text-gray-500 mb-4">아직 시작한 덱이 없습니다.</p>
+          <%= link_to decks_path, class: "bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors" do %>
+            새로운 덱 시작하기
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Available Decks -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">🎯 사용 가능한 덱</h2>
+      
+      <div class="space-y-3">
+        <% Deck.all.each do |deck| %>
+          <% user_progress = @user_deck_progresses.find { |p| p.deck_id == deck.id } %>
+          <% unless user_progress %>
+            <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="font-semibold text-gray-800"><%= deck.name %></h3>
+                  <p class="text-sm text-gray-600"><%= deck.description %></p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    📊 난이도: <%= deck.difficulty_level %>/5 | 
+                    📝 <%= deck.total_sentences %>개 문장
+                  </p>
+                </div>
+                <%= link_to deck_path(deck), class: "bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition-colors" do %>
+                  시작하기
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Achievements Section -->
+  <% if @achievements.any? %>
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">🏆 최근 성취</h2>
+      <div class="flex space-x-4 overflow-x-auto">
+        <% @achievements.each do |achievement| %>
+          <div class="flex-shrink-0 bg-yellow-50 border border-yellow-200 rounded-lg p-4 min-w-48">
+            <h3 class="font-semibold text-yellow-800"><%= achievement.achievement_type.humanize %></h3>
+            <p class="text-sm text-yellow-600"><%= achievement.achieved_at.strftime("%m/%d") %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Study Statistics -->
+  <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">📈 나의 성취</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="text-center p-4 bg-blue-50 rounded-lg">
+        <p class="text-2xl font-bold text-blue-600"><%= @total_study_time_hours %>시간</p>
+        <p class="text-sm text-blue-800">누적 학습 시간</p>
+        <% if @total_study_time_hours >= 100 %>
+          <p class="text-xs text-green-600 mt-1">🎉 100시간의 벽을 넘으셨군요!</p>
+        <% elsif @total_study_time_hours >= 50 %>
+          <p class="text-xs text-blue-600 mt-1">👏 50시간 달성! 꾸준함이 당신의 무기입니다!</p>
+        <% end %>
+      </div>
+      
+      <div class="text-center p-4 bg-green-50 rounded-lg">
+        <p class="text-2xl font-bold text-green-600"><%= @user.streak_days %></p>
+        <p class="text-sm text-green-800">연속 학습 일수</p>
+        <% if @user.streak_days >= 7 %>
+          <p class="text-xs text-green-600 mt-1">🔥 일주일 연속 학습!</p>
+        <% end %>
+      </div>
+      
+      <div class="text-center p-4 bg-purple-50 rounded-lg">
+        <p class="text-2xl font-bold text-purple-600"><%= @user_deck_progresses.count %></p>
+        <p class="text-sm text-purple-800">진행 중인 덱</p>
+      </div>
+    </div>
+  </div>
+</div>

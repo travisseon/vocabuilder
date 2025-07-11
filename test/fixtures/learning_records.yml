@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  user: one
+  sentence: one
+  status: 1
+  attempts_count: 1
+  correct_count: 1
+  first_attempt_correct: false
+  study_time: 1
+  last_studied_at: 2025-07-09 22:02:17
+
+two:
+  user: two
+  sentence: two
+  status: 1
+  attempts_count: 1
+  correct_count: 1
+  first_attempt_correct: false
+  study_time: 1
+  last_studied_at: 2025-07-09 22:02:17

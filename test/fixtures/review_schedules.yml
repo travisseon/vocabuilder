@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  learning_record: one
+  scheduled_date: 2025-07-09
+  interval_days: 1
+  ease_factor: 9.99
+  completed: false
+  completed_at: 2025-07-09 22:02:39
+
+two:
+  learning_record: two
+  scheduled_date: 2025-07-09
+  interval_days: 1
+  ease_factor: 9.99
+  completed: false
+  completed_at: 2025-07-09 22:02:39

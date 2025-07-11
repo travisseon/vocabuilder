@@ -1,0 +1,531 @@
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <!-- Progress Header -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <%= link_to deck_path(@deck), class: "flex items-center text-blue-600 hover:text-blue-800" do %>
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        <%= @deck.name %>으로 돌아가기
+      <% end %>
+      
+      <div class="text-sm text-gray-500">
+        시도 횟수: <span id="attempt-count"><%= @learning_record.attempts_count %></span>
+      </div>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <% completed_count = @deck.sentences.joins(:learning_records).where(learning_records: { user: current_user, status: ['learned', 'mastered'] }).count %>
+      <% progress_percentage = (@deck.sentences.count > 0) ? (completed_count.to_f / @deck.sentences.count * 100).round(1) : 0 %>
+      <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: <%= progress_percentage %>%"></div>
+    </div>
+    <p class="text-xs text-gray-500 mt-1"><%= completed_count %>/<%= @deck.sentences.count %> 문장 완료</p>
+  </div>
+
+  <!-- Korean Sentence (Target) -->
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8 text-center">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">다음 문장을 영어로 만들어보세요:</h2>
+    <p class="text-2xl font-bold text-blue-800"><%= @sentence.korean_text %></p>
+  </div>
+
+  <!-- Answer Area (Drag & Drop Zone) -->
+  <div class="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6 mb-8 min-h-32" 
+       id="answer-zone"
+       ondrop="drop(event)" 
+       ondragover="allowDrop(event)">
+    <div class="text-center text-gray-500 mb-4" id="answer-placeholder">
+      단어를 여기로 드래그하거나 클릭하여 문장을 만들어보세요
+    </div>
+    <div class="flex flex-wrap gap-2 justify-center" id="answer-words">
+      <!-- 선택된 단어들이 여기에 표시됩니다 -->
+    </div>
+  </div>
+
+  <!-- Word Bank -->
+  <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 text-center">단어 뱅크</h3>
+    <div class="flex flex-wrap gap-3 justify-center" id="word-bank">
+      <% @all_words.each_with_index do |word, index| %>
+        <div class="word-item bg-white border border-gray-300 rounded-lg px-4 py-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 select-none"
+             draggable="true" 
+             ondragstart="drag(event)"
+             onclick="moveToAnswer(this)"
+             data-word="<%= word.word %>"
+             data-id="<%= word.id %>"
+             id="word-<%= index %>">
+          <%= word.word %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex justify-center space-x-4">
+    <button id="clear-btn" 
+            onclick="clearAnswer()"
+            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors">
+      다시 시작
+    </button>
+    
+    <button id="check-btn" 
+            onclick="checkAnswer()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled>
+      정답 확인
+    </button>
+    
+    <button id="hint-btn" 
+            onclick="showHint()"
+            class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg transition-colors">
+      💡 힌트
+    </button>
+    
+    <button id="give-up-btn" 
+            onclick="giveUp()"
+            class="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg transition-colors">
+      포기
+    </button>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+      <div class="text-center">
+        <div class="text-6xl mb-4">🎉</div>
+        <h3 class="text-2xl font-bold text-green-600 mb-4">정답입니다!</h3>
+        <div id="correct-sentence" class="text-lg mb-2 font-semibold"></div>
+        <div id="korean-sentence" class="text-gray-600 mb-6"></div>
+        
+        <!-- Verb Explanations -->
+        <div id="verb-explanations" class="hidden">
+          <h4 class="text-lg font-semibold mb-3">🔍 동사 뉘앙스 설명</h4>
+          <div id="explanation-content"></div>
+        </div>
+        
+        <button onclick="playTTS()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg mr-3">
+          🔊 발음 듣기
+        </button>
+        
+        <button onclick="continueToNext()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+          다음 문장으로
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div id="error-message" class="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded hidden">
+    <span id="error-text"></span>
+  </div>
+</div>
+
+<script>
+let selectedWords = [];
+let correctSentence = '';
+let koreanSentence = '';
+let verbExplanations = [];
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Clear any previous state
+  selectedWords = [];
+  
+  // Reset all word bank items to visible
+  document.querySelectorAll('#word-bank .word-item').forEach(el => {
+    el.style.display = 'inline-block';
+  });
+  
+  // Clear answer zone
+  updateAnswerZone();
+  
+  // Disable check button
+  document.getElementById('check-btn').disabled = true;
+});
+
+// Drag and Drop Functions
+function allowDrop(ev) {
+  ev.preventDefault();
+}
+
+function drag(ev) {
+  ev.dataTransfer.setData("text", ev.target.id);
+}
+
+function drop(ev) {
+  ev.preventDefault();
+  const data = ev.dataTransfer.getData("text");
+  const draggedElement = document.getElementById(data);
+  moveToAnswer(draggedElement);
+}
+
+// Move word to answer zone
+function moveToAnswer(element) {
+  if (element.parentElement.id === 'word-bank') {
+    const word = element.dataset.word;
+    selectedWords.push(word);
+    
+    // Update answer zone
+    updateAnswerZone();
+    
+    // Hide from word bank
+    element.style.display = 'none';
+    
+    // Enable check button if we have words
+    document.getElementById('check-btn').disabled = selectedWords.length === 0;
+  }
+}
+
+// Move word back to word bank
+function moveToBank(wordElement, word) {
+  // Remove from selected words
+  const index = selectedWords.indexOf(word);
+  if (index > -1) {
+    selectedWords.splice(index, 1);
+  }
+  
+  // Update answer zone
+  updateAnswerZone();
+  
+  // Show in word bank again - 더 확실한 방법으로 찾기
+  const wordBankElements = document.querySelectorAll('#word-bank .word-item');
+  let foundElement = null;
+  
+  // 정확한 단어를 찾기 위해 모든 요소를 확인
+  wordBankElements.forEach(el => {
+    if (el.dataset.word === word) {
+      foundElement = el;
+    }
+  });
+  
+  if (foundElement) {
+    foundElement.style.display = 'inline-block';
+  } else {
+    // 요소를 찾을 수 없는 경우 콘솔에 로그 남기기
+    console.warn('Word bank element not found for word:', word);
+  }
+  
+  // Disable check button if no words
+  document.getElementById('check-btn').disabled = selectedWords.length === 0;
+}
+
+// Update answer zone display
+function updateAnswerZone() {
+  const answerZone = document.getElementById('answer-words');
+  const placeholder = document.getElementById('answer-placeholder');
+  
+  if (selectedWords.length === 0) {
+    placeholder.style.display = 'block';
+    answerZone.innerHTML = '';
+  } else {
+    placeholder.style.display = 'none';
+    
+    answerZone.innerHTML = selectedWords.map((word, index) => 
+      `<div class="word-item bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 cursor-pointer hover:bg-red-100 transition-all duration-200 select-none"
+            data-index="${index}"
+            data-word="${word}"
+            draggable="true"
+            ondragstart="handleAnswerDragStart(event, ${index})"
+            ondragend="handleAnswerDragEnd(event)"
+            ondragover="handleAnswerDragOver(event)"
+            ondragleave="handleAnswerDragLeave(event)"
+            ondrop="handleAnswerDrop(event, ${index})"
+            onclick="moveToBank(this, '${word}')"
+            title="클릭하여 제거, 드래그로 순서 변경">
+         ${word}
+       </div>`
+    ).join('');
+  }
+}
+
+// Answer zone drag and drop handlers
+function handleAnswerDragStart(event, index) {
+  event.dataTransfer.setData("text/plain", index);
+  event.dataTransfer.setData("source", "answer-zone");
+  event.target.style.opacity = '0.5';
+}
+
+function handleAnswerDragEnd(event) {
+  event.target.style.opacity = '1';
+}
+
+function handleAnswerDragOver(event) {
+  event.preventDefault();
+  event.target.style.backgroundColor = '#bfdbfe'; // blue-200
+}
+
+function handleAnswerDragLeave(event) {
+  event.target.style.backgroundColor = '#dbeafe'; // blue-100
+}
+
+function handleAnswerDrop(event, targetIndex) {
+  event.preventDefault();
+  const draggedIndex = parseInt(event.dataTransfer.getData("text/plain"));
+  const source = event.dataTransfer.getData("source");
+  
+  if (source === "answer-zone" && draggedIndex !== targetIndex) {
+    // Reorder words in answer zone
+    const draggedWord = selectedWords[draggedIndex];
+    selectedWords.splice(draggedIndex, 1);
+    selectedWords.splice(targetIndex, 0, draggedWord);
+    updateAnswerZone();
+  }
+  
+  event.target.style.backgroundColor = '#dbeafe'; // blue-100
+}
+
+// Clear all selected words
+function clearAnswer() {
+  selectedWords = [];
+  
+  // Show all words in bank
+  document.querySelectorAll('#word-bank .word-item').forEach(el => {
+    el.style.display = 'inline-block';
+  });
+  
+  // Update answer zone
+  updateAnswerZone();
+  
+  // Disable check button
+  document.getElementById('check-btn').disabled = true;
+}
+
+// Show hint
+function showHint() {
+  const correctWords = <%= @correct_words.pluck(:word).to_json.html_safe %>;
+  if (correctWords.length > selectedWords.length) {
+    const nextWord = correctWords[selectedWords.length];
+    
+    // Find and highlight the next word
+    const nextWordElement = Array.from(document.querySelectorAll('#word-bank .word-item'))
+                                .find(el => el.dataset.word === nextWord && el.style.display !== 'none');
+    
+    if (nextWordElement) {
+      nextWordElement.classList.add('animate-pulse', 'bg-yellow-200', 'border-yellow-400');
+      setTimeout(() => {
+        nextWordElement.classList.remove('animate-pulse', 'bg-yellow-200', 'border-yellow-400');
+      }, 2000);
+    }
+  }
+}
+
+// Give up - show correct answer
+function giveUp() {
+  if (confirm('정말 포기하시겠습니까? 정답이 공개됩니다.')) {
+    const correctWords = <%= @correct_words.pluck(:word).to_json.html_safe %>;
+    
+    // Set correct answer
+    selectedWords = [...correctWords];
+    updateAnswerZone();
+    
+    // Hide all words from bank
+    correctWords.forEach(word => {
+      const wordElement = Array.from(document.querySelectorAll('#word-bank .word-item'))
+                              .find(el => el.dataset.word === word);
+      if (wordElement) {
+        wordElement.style.display = 'none';
+      }
+    });
+    
+    // Show as incorrect attempt
+    correctSentence = '<%= j @sentence.english_text %>';
+    koreanSentence = '<%= j @sentence.korean_text %>';
+    verbExplanations = <%= @sentence.verb_explanations.map { |e| { verb: e.verb, explanation: e.explanation, comparison: e.comparison, examples: e.examples } }.to_json.html_safe %>;
+    
+    // Update modal content
+    document.getElementById('correct-sentence').textContent = correctSentence;
+    document.getElementById('korean-sentence').textContent = koreanSentence;
+    
+    // Show verb explanations
+    if (verbExplanations && verbExplanations.length > 0) {
+      const explanationDiv = document.getElementById('verb-explanations');
+      const contentDiv = document.getElementById('explanation-content');
+      
+      contentDiv.innerHTML = verbExplanations.map(exp => 
+        `<div class="mb-4 p-3 bg-red-50 rounded-lg text-left">
+           <strong class="text-red-800">${exp.verb}</strong>: ${exp.explanation}
+           ${exp.comparison ? `<br><small class="text-gray-600">${exp.comparison}</small>` : ''}
+         </div>`
+      ).join('');
+      
+      explanationDiv.classList.remove('hidden');
+    }
+    
+    // Change modal to give up style
+    document.querySelector('#success-modal h3').textContent = '포기했습니다 😔';
+    document.querySelector('#success-modal h3').className = 'text-2xl font-bold text-red-600 mb-4';
+    document.querySelector('#success-modal .text-6xl').textContent = '😔';
+    
+    // Show modal
+    document.getElementById('success-modal').classList.remove('hidden');
+    document.getElementById('success-modal').classList.add('flex');
+    
+    // Auto-play TTS when give up modal opens
+    setTimeout(() => {
+      playTTS();
+    }, 500); // 0.5초 후 자동 재생
+    
+    // Record as failed attempt
+    recordGiveUp();
+  }
+}
+
+// Record give up as failed attempt
+function recordGiveUp() {
+  <% if defined?(@learning_record) && @learning_record %>
+    const fetchUrl = window.location.pathname.includes('/reviews/') ? 
+      '/reviews/<%= @learning_record.id %>/check_answer' :
+      '<%= check_answer_deck_sentence_path(@deck, @sentence) %>';
+  <% else %>
+    const fetchUrl = '<%= check_answer_deck_sentence_path(@deck, @sentence) %>';
+  <% end %>
+  
+  fetch(fetchUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+      user_answer: [],  // Empty array = wrong answer
+      give_up: true
+    })
+  })
+  .catch(error => {
+    console.error('Error recording give up:', error);
+  });
+}
+
+// Check answer
+function checkAnswer() {
+  if (selectedWords.length === 0) return;
+  
+  const checkBtn = document.getElementById('check-btn');
+  checkBtn.disabled = true;
+  checkBtn.textContent = '확인 중...';
+  
+  // Determine if this is a review or learning session
+  const isReview = window.location.pathname.includes('/reviews/');
+  <% if defined?(@learning_record) && @learning_record %>
+    const fetchUrl = isReview ? 
+      '/reviews/<%= @learning_record.id %>/check_answer' :
+      '<%= check_answer_deck_sentence_path(@deck, @sentence) %>';
+  <% else %>
+    const fetchUrl = '<%= check_answer_deck_sentence_path(@deck, @sentence) %>';
+  <% end %>
+  
+  fetch(fetchUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+      user_answer: selectedWords
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      correctSentence = data.correct_sentence;
+      koreanSentence = data.korean_sentence;
+      verbExplanations = data.verb_explanations;
+      showSuccessModal();
+    } else {
+      showError(data.message);
+      // Update attempt count
+      document.getElementById('attempt-count').textContent = data.attempts;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showError('오류가 발생했습니다. 다시 시도해주세요.');
+  })
+  .finally(() => {
+    checkBtn.disabled = false;
+    checkBtn.textContent = '정답 확인';
+  });
+}
+
+// Show success modal
+function showSuccessModal() {
+  document.getElementById('correct-sentence').textContent = correctSentence;
+  document.getElementById('korean-sentence').textContent = koreanSentence;
+  
+  // Show verb explanations if available
+  if (verbExplanations && verbExplanations.length > 0) {
+    const explanationDiv = document.getElementById('verb-explanations');
+    const contentDiv = document.getElementById('explanation-content');
+    
+    contentDiv.innerHTML = verbExplanations.map(exp => 
+      `<div class="mb-4 p-3 bg-blue-50 rounded-lg text-left">
+         <strong class="text-blue-800">${exp.verb}</strong>: ${exp.explanation}
+         ${exp.comparison ? `<br><small class="text-gray-600">${exp.comparison}</small>` : ''}
+       </div>`
+    ).join('');
+    
+    explanationDiv.classList.remove('hidden');
+  }
+  
+  document.getElementById('success-modal').classList.remove('hidden');
+  document.getElementById('success-modal').classList.add('flex');
+  
+  // Auto-play TTS when modal opens
+  setTimeout(() => {
+    playTTS();
+  }, 500); // 0.5초 후 자동 재생
+}
+
+// Play TTS
+function playTTS() {
+  if ('speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(correctSentence);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.8;
+    speechSynthesis.speak(utterance);
+  }
+}
+
+// Continue to next sentence
+function continueToNext() {
+  const isReview = window.location.pathname.includes('/reviews/');
+  <% if defined?(@learning_record) && @learning_record %>
+    const continueUrl = isReview ? 
+      '/reviews/<%= @learning_record.id %>/complete' :
+      '<%= complete_deck_sentence_path(@deck, @sentence) %>';
+  <% else %>
+    const continueUrl = '<%= complete_deck_sentence_path(@deck, @sentence) %>';
+  <% end %>
+  
+  // Use POST method for complete action
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = continueUrl;
+  
+  // Add CSRF token
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'authenticity_token';
+  csrfInput.value = csrfToken;
+  form.appendChild(csrfInput);
+  
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// Show error message
+function showError(message) {
+  document.getElementById('error-text').textContent = message;
+  document.getElementById('error-message').classList.remove('hidden');
+  
+  setTimeout(() => {
+    document.getElementById('error-message').classList.add('hidden');
+  }, 3000);
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  updateAnswerZone();
+});
+</script>

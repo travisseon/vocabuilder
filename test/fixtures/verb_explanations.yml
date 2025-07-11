@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  sentence: one
+  verb: MyString
+  explanation: MyText
+  comparison: MyText
+  examples: MyText
+
+two:
+  sentence: two
+  verb: MyString
+  explanation: MyText
+  comparison: MyText
+  examples: MyText
