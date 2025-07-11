@@ -121,10 +121,31 @@
 </div>
 
 <script>
-let selectedWords = [];
+// 전역 변수 안전 선언
+if (typeof selectedWords === 'undefined') {
+  var selectedWords = [];
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+  // 완전한 초기화
+  initializePage();
+});
+
+// 페이지 나가기 전 초기화
+window.addEventListener('beforeunload', function() {
+  selectedWords = [];
+});
+
+// 페이지 가시성 변경 시 초기화 (탭 전환 등)
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') {
+    initializePage();
+  }
+});
+
+// 페이지 완전 초기화 함수
+function initializePage() {
   // Clear any previous state
   selectedWords = [];
   
@@ -133,8 +154,12 @@ document.addEventListener('DOMContentLoaded', function() {
     el.style.display = 'inline-block';
   });
   
-  // Clear answer zone
-  updateAnswerZone();
+  // Clear answer zone completely
+  const answerZone = document.getElementById('answer-words');
+  const placeholder = document.getElementById('answer-placeholder');
+  
+  answerZone.innerHTML = '';
+  placeholder.style.display = 'block';
   
   // Disable check button
   document.getElementById('check-btn').disabled = true;
@@ -142,7 +167,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Clear any existing modals
   document.getElementById('success-modal').classList.add('hidden');
   document.getElementById('success-modal').classList.remove('flex');
-});
+  
+  // Reset modal content
+  document.getElementById('correct-sentence').textContent = '';
+  document.getElementById('korean-sentence').textContent = '';
+  document.getElementById('verb-explanations').classList.add('hidden');
+  
+  // Reset modal style to default
+  const modalTitle = document.querySelector('#success-modal h3');
+  const modalEmoji = document.querySelector('#success-modal .text-6xl');
+  if (modalTitle) {
+    modalTitle.textContent = '정답입니다!';
+    modalTitle.className = 'text-2xl font-bold text-green-600 mb-4';
+  }
+  if (modalEmoji) {
+    modalEmoji.textContent = '🎉';
+  }
+}
 
 // Drag and Drop Functions
 function allowDrop(ev) {
@@ -284,8 +325,12 @@ function clearAnswer() {
     el.style.display = 'inline-block';
   });
   
-  // Update answer zone
-  updateAnswerZone();
+  // Clear answer zone completely
+  const answerZone = document.getElementById('answer-words');
+  const placeholder = document.getElementById('answer-placeholder');
+  
+  answerZone.innerHTML = '';
+  placeholder.style.display = 'block';
   
   // Disable check button
   document.getElementById('check-btn').disabled = true;
@@ -535,6 +580,9 @@ function playTTS() {
 
 // Continue to next sentence
 function continueToNext() {
+  // 다음 페이지로 이동하기 전 초기화
+  selectedWords = [];
+  
   const isReview = window.location.pathname.includes('/reviews/');
   <% if defined?(@learning_record) && @learning_record %>
     const continueUrl = isReview ? 
