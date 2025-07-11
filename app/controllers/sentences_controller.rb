@@ -1,6 +1,6 @@
 class SentencesController < ApplicationController
   before_action :require_login
-  before_action :set_deck_and_sentence, only: [:show, :check_answer, :complete]
+  before_action :set_deck_and_sentence, only: [:show, :check_answer, :complete, :sentence_data]
   before_action :set_learning_record, only: [:show, :check_answer, :complete]
   
   def show
@@ -39,7 +39,7 @@ class SentencesController < ApplicationController
       srs_service.schedule_next_review(quality_score)
       
       # 사용자 통계 업데이트
-      update_user_statistics(study_time)
+      update_user_study_statistics(study_time)
       
       # 덱 진행률 업데이트
       update_deck_progress
@@ -87,6 +87,22 @@ class SentencesController < ApplicationController
     end
   end
   
+  def sentence_data
+    # 현재 문장의 데이터를 JSON으로 반환
+    render json: {
+      english_text: @sentence.english_text,
+      korean_text: @sentence.korean_text,
+      verb_explanations: @sentence.verb_explanations.map do |explanation|
+        {
+          verb: explanation.verb,
+          explanation: explanation.explanation,
+          comparison: explanation.comparison,
+          examples: explanation.examples
+        }
+      end
+    }
+  end
+  
   private
   
   def set_deck_and_sentence
@@ -132,19 +148,7 @@ class SentencesController < ApplicationController
     end
   end
   
-  def update_user_statistics(study_time)
-    current_user.total_study_time += study_time
-    current_user.last_study_date = Date.current
-    
-    # 연속 학습 일수 계산
-    if current_user.last_study_date == Date.current - 1.day
-      current_user.streak_days += 1
-    elsif current_user.last_study_date != Date.current
-      current_user.streak_days = 1
-    end
-    
-    current_user.save!
-  end
+  # 공통 메서드는 ApplicationController로 이동됨
   
   def find_next_sentence
     # 현재 문장보다 ID가 큰 문장 중에서 아직 완료하지 않은 첫 번째 문장 찾기

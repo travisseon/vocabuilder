@@ -19,7 +19,7 @@ class DecksController < ApplicationController
     completed_sentence_ids = current_user.learning_records
                                        .joins(:sentence)
                                        .where(sentences: { deck: @deck })
-                                       .where(status: ['learned', 'mastered'])
+                                       .where(status: ['learning', 'learned', 'mastered'])
                                        .pluck(:sentence_id)
     
     @next_sentence = @deck.sentences.where.not(id: completed_sentence_ids).first

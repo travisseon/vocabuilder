@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       member do
         post :check_answer
         post :complete
+        get :sentence_data
       end
     end
   end

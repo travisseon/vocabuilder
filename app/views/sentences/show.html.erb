@@ -122,9 +122,6 @@
 
 <script>
 let selectedWords = [];
-let correctSentence = '';
-let koreanSentence = '';
-let verbExplanations = [];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -141,6 +138,10 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Disable check button
   document.getElementById('check-btn').disabled = true;
+  
+  // Clear any existing modals
+  document.getElementById('success-modal').classList.add('hidden');
+  document.getElementById('success-modal').classList.remove('flex');
 });
 
 // Drag and Drop Functions
@@ -327,43 +328,63 @@ function giveUp() {
       }
     });
     
-    // Show as incorrect attempt
-    correctSentence = <%= @sentence.english_text.to_json.html_safe %>;
-    koreanSentence = <%= @sentence.korean_text.to_json.html_safe %>;
-    verbExplanations = <%= @sentence.verb_explanations.map { |e| { verb: e.verb, explanation: e.explanation, comparison: e.comparison, examples: e.examples } }.to_json.html_safe %>;
+    // URL에서 deck_id와 sentence_id 추출
+    const pathParts = window.location.pathname.split('/');
+    const deckId = pathParts[2];
+    const sentenceId = pathParts[4];
     
-    // Update modal content
-    document.getElementById('correct-sentence').textContent = correctSentence;
-    document.getElementById('korean-sentence').textContent = koreanSentence;
-    
-    // Show verb explanations
-    if (verbExplanations && verbExplanations.length > 0) {
-      const explanationDiv = document.getElementById('verb-explanations');
-      const contentDiv = document.getElementById('explanation-content');
+    // 서버에서 현재 문장 정보 다시 조회
+    fetch(`/decks/${deckId}/sentences/${sentenceId}/sentence_data`, {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Update modal content with fresh data
+      document.getElementById('correct-sentence').textContent = data.english_text;
+      document.getElementById('korean-sentence').textContent = data.korean_text;
       
-      contentDiv.innerHTML = verbExplanations.map(exp => 
-        `<div class="mb-4 p-3 bg-red-50 rounded-lg text-left">
-           <strong class="text-red-800">${exp.verb}</strong>: ${exp.explanation}
-           ${exp.comparison ? `<br><small class="text-gray-600">${exp.comparison}</small>` : ''}
-         </div>`
-      ).join('');
+      // Show verb explanations
+      if (data.verb_explanations && data.verb_explanations.length > 0) {
+        const explanationDiv = document.getElementById('verb-explanations');
+        const contentDiv = document.getElementById('explanation-content');
+        
+        contentDiv.innerHTML = data.verb_explanations.map(exp => 
+          `<div class="mb-4 p-3 bg-red-50 rounded-lg text-left">
+             <strong class="text-red-800">${exp.verb}</strong>: ${exp.explanation}
+             ${exp.comparison ? `<br><small class="text-gray-600">${exp.comparison}</small>` : ''}
+           </div>`
+        ).join('');
+        
+        explanationDiv.classList.remove('hidden');
+      }
       
-      explanationDiv.classList.remove('hidden');
-    }
-    
-    // Change modal to give up style
-    document.querySelector('#success-modal h3').textContent = '포기했습니다 😔';
-    document.querySelector('#success-modal h3').className = 'text-2xl font-bold text-red-600 mb-4';
-    document.querySelector('#success-modal .text-6xl').textContent = '😔';
-    
-    // Show modal
-    document.getElementById('success-modal').classList.remove('hidden');
-    document.getElementById('success-modal').classList.add('flex');
-    
-    // Auto-play TTS when give up modal opens
-    setTimeout(() => {
-      playTTS();
-    }, 500); // 0.5초 후 자동 재생
+      // Change modal to give up style
+      document.querySelector('#success-modal h3').textContent = '포기했습니다 😔';
+      document.querySelector('#success-modal h3').className = 'text-2xl font-bold text-red-600 mb-4';
+      document.querySelector('#success-modal .text-6xl').textContent = '😔';
+      
+      // Show modal
+      document.getElementById('success-modal').classList.remove('hidden');
+      document.getElementById('success-modal').classList.add('flex');
+      
+      // Auto-play TTS when give up modal opens
+      setTimeout(() => {
+        playTTS();
+      }, 500);
+    })
+    .catch(error => {
+      console.error('Error getting sentence data:', error);
+      // 에러 시 기본값 사용
+      document.getElementById('correct-sentence').textContent = '<%= @sentence.english_text %>';
+      document.getElementById('korean-sentence').textContent = '<%= @sentence.korean_text %>';
+      
+      // Show modal anyway
+      document.getElementById('success-modal').classList.remove('hidden');
+      document.getElementById('success-modal').classList.add('flex');
+    });
     
     // Record as failed attempt
     recordGiveUp();
@@ -427,9 +448,7 @@ function checkAnswer() {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      correctSentence = data.correct_sentence;
-      koreanSentence = data.korean_sentence;
-      verbExplanations = data.verb_explanations;
+      // 성공 시 모달 표시
       showSuccessModal();
     } else {
       showError(data.message);
@@ -449,37 +468,65 @@ function checkAnswer() {
 
 // Show success modal
 function showSuccessModal() {
-  document.getElementById('correct-sentence').textContent = correctSentence;
-  document.getElementById('korean-sentence').textContent = koreanSentence;
+  // URL에서 deck_id와 sentence_id 추출
+  const pathParts = window.location.pathname.split('/');
+  const deckId = pathParts[2];
+  const sentenceId = pathParts[4];
   
-  // Show verb explanations if available
-  if (verbExplanations && verbExplanations.length > 0) {
-    const explanationDiv = document.getElementById('verb-explanations');
-    const contentDiv = document.getElementById('explanation-content');
+  // 서버에서 현재 문장 정보 다시 조회
+  fetch(`/decks/${deckId}/sentences/${sentenceId}/sentence_data`, {
+    method: 'GET',
+    headers: {
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Update modal content with fresh data
+    document.getElementById('correct-sentence').textContent = data.english_text;
+    document.getElementById('korean-sentence').textContent = data.korean_text;
     
-    contentDiv.innerHTML = verbExplanations.map(exp => 
-      `<div class="mb-4 p-3 bg-blue-50 rounded-lg text-left">
-         <strong class="text-blue-800">${exp.verb}</strong>: ${exp.explanation}
-         ${exp.comparison ? `<br><small class="text-gray-600">${exp.comparison}</small>` : ''}
-       </div>`
-    ).join('');
+    // Show verb explanations
+    if (data.verb_explanations && data.verb_explanations.length > 0) {
+      const explanationDiv = document.getElementById('verb-explanations');
+      const contentDiv = document.getElementById('explanation-content');
+      
+      contentDiv.innerHTML = data.verb_explanations.map(exp => 
+        `<div class="mb-4 p-3 bg-blue-50 rounded-lg text-left">
+           <strong class="text-blue-800">${exp.verb}</strong>: ${exp.explanation}
+           ${exp.comparison ? `<br><small class="text-gray-600">${exp.comparison}</small>` : ''}
+         </div>`
+      ).join('');
+      
+      explanationDiv.classList.remove('hidden');
+    }
     
-    explanationDiv.classList.remove('hidden');
-  }
-  
-  document.getElementById('success-modal').classList.remove('hidden');
-  document.getElementById('success-modal').classList.add('flex');
-  
-  // Auto-play TTS when modal opens
-  setTimeout(() => {
-    playTTS();
-  }, 500); // 0.5초 후 자동 재생
+    document.getElementById('success-modal').classList.remove('hidden');
+    document.getElementById('success-modal').classList.add('flex');
+    
+    // Auto-play TTS when modal opens
+    setTimeout(() => {
+      playTTS();
+    }, 500);
+  })
+  .catch(error => {
+    console.error('Error getting sentence data:', error);
+    // 에러 시 기본값 사용
+    document.getElementById('correct-sentence').textContent = '<%= @sentence.english_text %>';
+    document.getElementById('korean-sentence').textContent = '<%= @sentence.korean_text %>';
+    
+    // Show modal anyway
+    document.getElementById('success-modal').classList.remove('hidden');
+    document.getElementById('success-modal').classList.add('flex');
+  });
 }
 
 // Play TTS
 function playTTS() {
   if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(correctSentence);
+    // 모달에서 직접 텍스트 읽기
+    const sentenceText = document.getElementById('correct-sentence').textContent;
+    const utterance = new SpeechSynthesisUtterance(sentenceText);
     utterance.lang = 'en-US';
     utterance.rate = 0.8;
     speechSynthesis.speak(utterance);
@@ -524,8 +571,5 @@ function showError(message) {
   }, 3000);
 }
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-  updateAnswerZone();
-});
+// Note: Page initialization is already handled above in the first DOMContentLoaded event
 </script>

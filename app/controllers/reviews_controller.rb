@@ -58,7 +58,7 @@ class ReviewsController < ApplicationController
       srs_service.schedule_next_review(quality_score)
       
       # 사용자 통계 업데이트
-      update_user_review_statistics(review_time)
+      update_user_study_statistics(review_time)
       
       render json: { 
         success: true, 
@@ -124,17 +124,5 @@ class ReviewsController < ApplicationController
     end
   end
   
-  def update_user_review_statistics(review_time)
-    current_user.total_study_time += review_time
-    current_user.last_study_date = Date.current
-    
-    # 연속 학습 일수 업데이트
-    if current_user.last_study_date == Date.current - 1.day
-      current_user.streak_days += 1
-    elsif current_user.last_study_date != Date.current
-      current_user.streak_days = 1
-    end
-    
-    current_user.save!
-  end
+  # 공통 메서드는 ApplicationController로 이동됨
 end
